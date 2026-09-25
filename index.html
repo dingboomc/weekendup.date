@@ -77,6 +77,23 @@
       border-radius: 50%;
       background: var(--accent);
       display: inline-block;
+
+      /*
+        Subtle slow pulse between full opacity
+        and 50% opacity.
+      */
+      animation: statusPulse 3.5s ease-in-out infinite;
+    }
+
+    @keyframes statusPulse {
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
     }
 
     h1 {
@@ -182,6 +199,12 @@
       );
     }
 
+    /*
+      The list itself is the only thing that moves.
+      Individual rows no longer have their own vertical
+      animation, preventing the bouncing effect.
+    */
+
     .ticker-list {
       position: absolute;
       right: 0;
@@ -193,15 +216,15 @@
       flex-direction: column;
       justify-content: flex-end;
       gap: 7px;
+
+      transform: translateY(0);
+
+      transition: transform 1.1s cubic-bezier(0.22, 0.61, 0.36, 1);
     }
 
     .ticker-row {
       width: 100%;
 
-      /*
-        Tightened columns:
-        symbol | price | percentage
-      */
       display: grid;
       grid-template-columns: 62px 78px 70px;
 
@@ -221,16 +244,14 @@
 
       /*
         Opacity is controlled entirely by JavaScript.
-        This prevents new entries from inheriting
-        an incorrect opacity from CSS.
       */
       opacity: 0.1;
 
-      transform: translateY(0);
-
-      transition:
-        opacity 1.2s ease,
-        transform 1.2s ease;
+      /*
+        Only opacity transitions here.
+        No row movement.
+      */
+      transition: opacity 1.1s ease;
     }
 
     .ticker-symbol {
@@ -250,7 +271,7 @@
     }
 
     /*
-      Positive movements are the lighter pink.
+      Positive movements = lighter pink.
     */
 
     .ticker-change.up {
@@ -258,24 +279,11 @@
     }
 
     /*
-      Negative movements are the darker pink.
+      Negative movements = darker pink.
     */
 
     .ticker-change.down {
       color: var(--ticker-negative);
-    }
-
-    /*
-      New rows enter from below.
-    */
-
-    .ticker-row.entering {
-      opacity: 0 !important;
-      transform: translateY(18px);
-    }
-
-    .ticker-row.visible {
-      transform: translateY(0);
     }
 
     /*
@@ -327,6 +335,14 @@
     */
 
     @media (prefers-reduced-motion: reduce) {
+      .dot {
+        animation: none;
+      }
+
+      .ticker-list {
+        transition: none;
+      }
+
       .ticker-row {
         transition: none;
       }
@@ -381,7 +397,6 @@
 
     <footer>
       <div>Established 2026</div>
-      <div>weekendup.date</div>
     </footer>
 
   </main>
@@ -467,8 +482,8 @@
     }
 
     /*
-      Apply opacity according to the row's
-      current position in the list.
+      Apply opacity according to each row's
+      current position.
     */
 
     function updateOpacities() {
@@ -487,16 +502,64 @@
     }
 
     /*
+      Return the symbols currently visible.
+    */
+
+    function getVisibleSymbols() {
+      return Array.from(
+        tickerList.querySelectorAll(".ticker-row")
+      ).map(row => row.dataset.symbol);
+    }
+
+    /*
+      Pick a symbol that is NOT currently visible.
+
+      This prevents duplicate ticker symbols from
+      appearing simultaneously.
+    */
+
+    function getUniqueSymbol() {
+      const visibleSymbols = getVisibleSymbols();
+
+      const availableSymbols = symbols.filter(
+        symbol => !visibleSymbols.includes(symbol)
+      );
+
+      /*
+        There are enough symbols for the number of
+        visible rows, but fall back safely if that
+        ever changes.
+      */
+
+      if (availableSymbols.length === 0) {
+        return null;
+      }
+
+      return availableSymbols[
+        Math.floor(Math.random() * availableSymbols.length)
+      ];
+    }
+
+    /*
       Create one ticker row.
     */
 
     function createTicker() {
+      const symbol = getUniqueSymbol();
+
+      /*
+        If every available symbol is already on screen,
+        don't create a duplicate.
+      */
+
+      if (!symbol) {
+        return null;
+      }
+
       const row = document.createElement("div");
 
-      row.className = "ticker-row entering";
-
-      const symbol =
-        symbols[Math.floor(Math.random() * symbols.length)];
+      row.className = "ticker-row";
+      row.dataset.symbol = symbol;
 
       const change = generateChange();
 
@@ -518,132 +581,117 @@
     }
 
     /*
-      Add a new ticker to the bottom.
+      Add a new ticker and smoothly push the
+      existing stack upward.
     */
 
     function addTicker() {
+      /*
+        Prevent a new ticker from being added if
+        there isn't an unused symbol available.
+      */
+
       const row = createTicker();
 
+      if (!row) {
+        return;
+      }
+
       /*
-        Add the new row while it is still completely
-        transparent and positioned below the list.
+        Add the new row to the bottom.
+
+        At this moment there are temporarily 9 rows.
       */
 
       tickerList.appendChild(row);
 
       /*
-        Set the opacity state BEFORE beginning
-        the animation.
-
-        This is the important part that prevents
-        new rows from appearing at full opacity.
+        Get the exact height of one row including
+        the gap between rows.
       */
 
-      updateOpacities();
+      const rowHeight =
+        row.getBoundingClientRect().height + 7;
 
       /*
-        Force the browser to acknowledge the initial
-        entering state before transitioning.
+        Immediately assign the correct opacity
+        levels to the new arrangement.
+
+        The new bottom row starts at exactly 10%.
       */
 
-      void row.offsetHeight;
+      const rows = Array.from(
+        tickerList.querySelectorAll(".ticker-row")
+      );
 
-      requestAnimationFrame(() => {
-        row.classList.remove("entering");
-        row.classList.add("visible");
+      rows.forEach((currentRow, index) => {
 
-        /*
-          The new row will ultimately become the
-          bottommost visible row, so it stays at 10%.
-        */
+        if (index === 0) {
+          /*
+            Oldest row is leaving.
+          */
+          currentRow.style.opacity = 0;
+        } else {
+          /*
+            Every remaining row moves up one position.
+          */
+          const newIndex = index - 1;
 
-        updateOpacities();
+          currentRow.style.opacity =
+            opacityLevels[newIndex] !== undefined
+              ? opacityLevels[newIndex]
+              : 0.10;
+        }
       });
 
       /*
-        Once we have 9 rows, move the list upward
-        and remove the oldest row.
+        Move the entire ticker stack upward exactly
+        one row height.
+
+        No individual row gets a transform, which
+        eliminates the previous bouncing effect.
       */
 
-      if (tickerList.children.length > maximumTickers) {
+      requestAnimationFrame(() => {
+        tickerList.style.transform =
+          `translateY(-${rowHeight}px)`;
+      });
+
+      /*
+        After the movement completes, remove the
+        oldest row and reset the list position.
+
+        Because the visual positions are identical
+        before and after the reset, there should be
+        no visible jump.
+      */
+
+      setTimeout(() => {
 
         const oldest = tickerList.firstElementChild;
 
-        /*
-          Give all rows their new opacity positions
-          before moving them upward.
+        if (oldest) {
+          oldest.remove();
+        }
 
-          The existing rows therefore fade smoothly
-          as their position changes.
-        */
-
-        const rows =
-          Array.from(tickerList.querySelectorAll(".ticker-row"));
-
-        rows.forEach((currentRow, index) => {
-          if (index === 0) {
-            currentRow.style.opacity = "0";
-          } else {
-            const newIndex = index - 1;
-
-            currentRow.style.opacity =
-              opacityLevels[newIndex] !== undefined
-                ? opacityLevels[newIndex]
-                : 0.10;
-          }
-        });
+        tickerList.style.transition = "none";
+        tickerList.style.transform = "translateY(0)";
 
         /*
-          Measure one row so the movement stays accurate
-          even if the styling changes later.
+          Re-establish the standard opacity gradient.
         */
 
-        const rowHeight =
-          oldest.getBoundingClientRect().height + 7;
-
-        requestAnimationFrame(() => {
-          tickerList.style.transform =
-            `translateY(-${rowHeight}px)`;
-
-          /*
-            Fade the oldest row out while it moves away.
-          */
-
-          oldest.style.transform =
-            "translateY(-14px)";
-        });
+        updateOpacities();
 
         /*
-          After the transition finishes, remove the
-          oldest row and reset the list position.
+          Force the browser to apply the reset
+          immediately rather than animating it.
         */
 
-        setTimeout(() => {
+        void tickerList.offsetHeight;
 
-          if (oldest.parentNode === tickerList) {
-            oldest.remove();
-          }
-
-          tickerList.style.transition = "none";
-          tickerList.style.transform = "translateY(0)";
-
-          /*
-            Recalculate the exact opacity levels
-            now that the list contains 8 rows again.
-          */
-
-          updateOpacities();
-
-          /*
-            Force a reflow so the transform reset is
-            applied immediately rather than animated.
-          */
-
-          void tickerList.offsetHeight;
-
-          tickerList.style.transition = "";
-        }, 1250);
-      }
+        tickerList.style.transition = "";
+      }, 1150);
     }
 
     /*
@@ -654,10 +702,9 @@
 
       const row = createTicker();
 
-      row.classList.remove("entering");
-      row.classList.add("visible");
-
-      tickerList.appendChild(row);
+      if (row) {
+        tickerList.appendChild(row);
+      }
     }
 
     /*

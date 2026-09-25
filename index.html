@@ -17,7 +17,7 @@
       --muted: #8d8d88;
       --line: #30302e;
       --accent: #ff3fa4;
-      --globe: #ffb3d8;
+      --ticker: #ffb3d8;
     }
 
     * {
@@ -145,215 +145,167 @@
 
     /*
       --------------------------------------------------
-      3D WIREFRAME GLOBE
+      BACKGROUND STOCK TICKER
       --------------------------------------------------
     */
 
-    .globe {
+    .ticker-background {
       position: fixed;
-      width: min(58vw, 700px);
-      height: min(58vw, 700px);
-      right: -140px;
-      bottom: -150px;
+      right: -20px;
+      bottom: -10px;
+
+      width: min(440px, 46vw);
+      height: 300px;
+
       pointer-events: none;
       z-index: 1;
-      opacity: 0.12;
 
-      perspective: 1200px;
+      /*
+        The ticker is intentionally subtle.
+        The individual rows control their own opacity.
+      */
+
+      overflow: hidden;
+
+      mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        black 8%,
+        black 92%,
+        transparent 100%
+      );
+
+      -webkit-mask-image: linear-gradient(
+        to bottom,
+        transparent 0%,
+        black 8%,
+        black 92%,
+        transparent 100%
+      );
     }
 
-    .globe-sphere {
-      position: relative;
+    .ticker-list {
+      position: absolute;
+      right: 0;
+      bottom: 0;
+
       width: 100%;
-      height: 100%;
 
-      transform-style: preserve-3d;
+      display: flex;
+      flex-direction: column;
+      justify-content: flex-end;
+      gap: 7px;
+    }
 
-      animation: globeRotate 60s linear infinite;
+    .ticker-row {
+      width: 100%;
+
+      display: grid;
+      grid-template-columns: 70px 90px 82px 1fr;
+      align-items: center;
+
+      gap: 12px;
+
+      padding: 4px 20px 4px 18px;
+
+      font-family: "Manrope", sans-serif;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.07em;
+
+      color: var(--ticker);
+
+      white-space: nowrap;
+
+      transform: translateY(0);
+
+      transition:
+        opacity 1.2s ease,
+        transform 1.2s ease;
+    }
+
+    .ticker-symbol {
+      color: var(--ticker);
+    }
+
+    .ticker-price {
+      text-align: right;
+    }
+
+    .ticker-change {
+      text-align: right;
+    }
+
+    .ticker-change.up {
+      color: var(--accent);
+    }
+
+    .ticker-change.down {
+      color: var(--ticker);
+    }
+
+    .ticker-volume {
+      text-align: right;
+      color: var(--ticker);
+      opacity: 0.75;
     }
 
     /*
-      The actual spherical outline.
+      New rows enter from below and gently settle
+      into their final position.
     */
 
-    .globe-outline {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 58.6%;
-      height: 58.6%;
+    .ticker-row.entering {
+      opacity: 0;
+      transform: translateY(18px);
+    }
 
-      transform: translate(-50%, -50%);
-
-      border: 0.75px solid var(--globe);
-      border-radius: 50%;
+    .ticker-row.visible {
+      transform: translateY(0);
     }
 
     /*
-      Latitude rings.
-      These remain fixed relative to the globe while
-      the longitude rings rotate around the Y axis.
+      Different opacity levels create the fading
+      top-to-bottom / bottom-to-top depth effect.
     */
 
-    .latitude {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-
-      width: 58.6%;
-      height: 58.6%;
-
-      border: 0.75px solid var(--globe);
-      border-radius: 50%;
-
-      transform-origin: center center;
+    .ticker-row:nth-child(1) {
+      opacity: 0.10;
     }
 
-    .latitude.north-1 {
-      transform:
-        translate(-50%, -50%)
-        translateY(-18%)
-        scaleY(0.28);
+    .ticker-row:nth-child(2) {
+      opacity: 0.20;
     }
 
-    .latitude.north-2 {
-      transform:
-        translate(-50%, -50%)
-        translateY(-10%)
-        scaleY(0.68);
+    .ticker-row:nth-child(3) {
+      opacity: 0.30;
     }
 
-    .latitude.south-1 {
-      transform:
-        translate(-50%, -50%)
-        translateY(10%)
-        scaleY(0.68);
+    .ticker-row:nth-child(4) {
+      opacity: 0.40;
     }
 
-    .latitude.south-2 {
-      transform:
-        translate(-50%, -50%)
-        translateY(18%)
-        scaleY(0.28);
+    .ticker-row:nth-child(5) {
+      opacity: 0.50;
+    }
+
+    .ticker-row:nth-child(6) {
+      opacity: 0.40;
+    }
+
+    .ticker-row:nth-child(7) {
+      opacity: 0.20;
+    }
+
+    .ticker-row:nth-child(8) {
+      opacity: 0.10;
     }
 
     /*
-      Equator.
+      --------------------------------------------------
+      MOBILE
+      --------------------------------------------------
     */
-
-    .equator {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 58.6%;
-      height: 0;
-
-      border-top: 0.75px solid var(--globe);
-
-      transform: translate(-50%, -50%);
-    }
-
-    /*
-      Longitude rings.
-      
-      Each ring is a circle standing vertically in 3D space.
-      Rotating the sphere around Y makes these naturally
-      compress and expand as they move toward/away from view.
-    */
-
-    .longitude {
-      position: absolute;
-      left: 50%;
-      top: 50%;
-
-      width: 58.6%;
-      height: 58.6%;
-
-      border: 0.75px solid var(--globe);
-      border-radius: 50%;
-
-      transform-origin: center center;
-    }
-
-    .longitude-1 {
-      transform:
-        translate(-50%, -50%)
-        rotateY(15deg);
-    }
-
-    .longitude-2 {
-      transform:
-        translate(-50%, -50%)
-        rotateY(30deg);
-    }
-
-    .longitude-3 {
-      transform:
-        translate(-50%, -50%)
-        rotateY(45deg);
-    }
-
-    .longitude-4 {
-      transform:
-        translate(-50%, -50%)
-        rotateY(60deg);
-    }
-
-    .longitude-5 {
-      transform:
-        translate(-50%, -50%)
-        rotateY(75deg);
-    }
-
-    .longitude-6 {
-      transform:
-        translate(-50%, -50%)
-        rotateY(90deg);
-    }
-
-    .longitude-7 {
-      transform:
-        translate(-50%, -50%)
-        rotateY(105deg);
-    }
-
-    .longitude-8 {
-      transform:
-        translate(-50%, -50%)
-        rotateY(120deg);
-    }
-
-    .longitude-9 {
-      transform:
-        translate(-50%, -50%)
-        rotateY(135deg);
-    }
-
-    .longitude-10 {
-      transform:
-        translate(-50%, -50%)
-        rotateY(150deg);
-    }
-
-    .longitude-11 {
-      transform:
-        translate(-50%, -50%)
-        rotateY(165deg);
-    }
-
-    /*
-      Slow rotation around the vertical axis.
-    */
-
-    @keyframes globeRotate {
-      from {
-        transform: rotateY(0deg);
-      }
-
-      to {
-        transform: rotateY(360deg);
-      }
-    }
 
     @media (max-width: 600px) {
       body {
@@ -378,22 +330,28 @@
         margin-top: 70px;
       }
 
-      .globe {
-        width: 115vw;
-        height: 115vw;
-        right: -45vw;
-        bottom: -25vw;
-        opacity: 0.10;
+      .ticker-background {
+        width: 90vw;
+        height: 250px;
+        right: -30px;
+        bottom: -10px;
+      }
+
+      .ticker-row {
+        grid-template-columns: 58px 72px 70px 1fr;
+        gap: 8px;
+        padding-right: 12px;
+        font-size: 9px;
       }
     }
 
     /*
-      Respect users who have requested reduced motion.
+      Respect reduced-motion preferences.
     */
 
     @media (prefers-reduced-motion: reduce) {
-      .globe-sphere {
-        animation: none;
+      .ticker-row {
+        transition: none;
       }
     }
   </style>
@@ -401,38 +359,13 @@
 
 <body>
 
-  <!-- 3D wireframe globe -->
-  <div class="globe" aria-hidden="true">
+  <!--
+    Fictional background stock ticker.
+    All values are generated locally and are not real market data.
+  -->
 
-    <div class="globe-sphere">
-
-      <!-- Outer sphere -->
-      <div class="globe-outline"></div>
-
-      <!-- Latitude rings -->
-      <div class="latitude north-1"></div>
-      <div class="latitude north-2"></div>
-      <div class="latitude south-1"></div>
-      <div class="latitude south-2"></div>
-
-      <!-- Equator -->
-      <div class="equator"></div>
-
-      <!-- Longitude rings -->
-      <div class="longitude longitude-1"></div>
-      <div class="longitude longitude-2"></div>
-      <div class="longitude longitude-3"></div>
-      <div class="longitude longitude-4"></div>
-      <div class="longitude longitude-5"></div>
-      <div class="longitude longitude-6"></div>
-      <div class="longitude longitude-7"></div>
-      <div class="longitude longitude-8"></div>
-      <div class="longitude longitude-9"></div>
-      <div class="longitude longitude-10"></div>
-      <div class="longitude longitude-11"></div>
-
-    </div>
-
+  <div class="ticker-background" aria-hidden="true">
+    <div class="ticker-list" id="tickerList"></div>
   </div>
 
   <main>
@@ -474,6 +407,179 @@
     </footer>
 
   </main>
+
+  <script>
+    /*
+      --------------------------------------------------
+      FICTIONAL STOCK TICKER GENERATOR
+      --------------------------------------------------
+
+      These symbols and values are completely fictional.
+      Nothing is fetched from an external source.
+    */
+
+    const tickerList = document.getElementById("tickerList");
+
+    const symbols = [
+      "WKND",
+      "UPDT",
+      "SATX",
+      "FRDY",
+      "NITE",
+      "WEEK",
+      "SUND",
+      "MORN",
+      "STDB",
+      "OFFC",
+      "REST",
+      "BRCH",
+      "PLAZ",
+      "TZZY",
+      "SNCK",
+      "DWN",
+      "IDLL",
+      "HRSY",
+      "BRLL",
+      "KID"
+    ];
+
+    const initialTickers = 8;
+    const maximumTickers = 8;
+
+    /*
+      Generate a fictional price.
+    */
+
+    function generatePrice() {
+      const price = Math.random() * 490 + 10;
+      return price.toFixed(2);
+    }
+
+    /*
+      Generate a fictional percentage movement.
+    */
+
+    function generateChange() {
+      const positive = Math.random() > 0.45;
+      const amount = Math.random() * 7 + 0.05;
+      const value = amount.toFixed(2);
+
+      return {
+        value: positive ? `+${value}%` : `-${value}%`,
+        direction: positive ? "up" : "down"
+      };
+    }
+
+    /*
+      Generate a fictional trading volume.
+    */
+
+    function generateVolume() {
+      const volume = Math.floor(Math.random() * 980 + 20);
+      return `${volume}K`;
+    }
+
+    /*
+      Create one ticker row.
+    */
+
+    function createTicker() {
+      const row = document.createElement("div");
+
+      row.className = "ticker-row entering";
+
+      const symbol = symbols[
+        Math.floor(Math.random() * symbols.length)
+      ];
+
+      const change = generateChange();
+
+      row.innerHTML = `
+        <span class="ticker-symbol">${symbol}</span>
+        <span class="ticker-price">$${generatePrice()}</span>
+        <span class="ticker-change ${change.direction}">
+          ${change.value}
+        </span>
+        <span class="ticker-volume">
+          VOL ${generateVolume()}
+        </span>
+      `;
+
+      return row;
+    }
+
+    /*
+      Add a new ticker to the bottom.
+    */
+
+    function addTicker() {
+      const row = createTicker();
+
+      tickerList.appendChild(row);
+
+      /*
+        Allow the browser to render the entering state
+        before transitioning into the visible state.
+      */
+
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          row.classList.remove("entering");
+          row.classList.add("visible");
+        });
+      });
+
+      /*
+        Remove the oldest ticker once we exceed
+        the maximum number of visible rows.
+      */
+
+      while (tickerList.children.length > maximumTickers) {
+        const oldest = tickerList.firstElementChild;
+
+        oldest.style.opacity = "0";
+        oldest.style.transform = "translateY(-14px)";
+
+        setTimeout(() => {
+          if (oldest.parentNode === tickerList) {
+            oldest.remove();
+          }
+        }, 1200);
+
+        break;
+      }
+    }
+
+    /*
+      Fill the ticker immediately when the page loads.
+    */
+
+    for (let i = 0; i < initialTickers; i++) {
+      const row = createTicker();
+
+      row.classList.remove("entering");
+      row.classList.add("visible");
+
+      tickerList.appendChild(row);
+    }
+
+    /*
+      Add new entries at a random interval between
+      1 and 4 seconds.
+    */
+
+    function scheduleNextTicker() {
+      const delay =
+        Math.floor(Math.random() * 3000) + 1000;
+
+      setTimeout(() => {
+        addTicker();
+        scheduleNextTicker();
+      }, delay);
+    }
+
+    scheduleNextTicker();
+  </script>
 
 </body>
 </html>
